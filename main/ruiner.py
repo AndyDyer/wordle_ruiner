@@ -1,7 +1,8 @@
 import re
 from enum import Enum
-import typer
 from typing import List, Tuple
+
+import typer
 
 app = typer.Typer()
 words = []
@@ -15,7 +16,7 @@ class WORDLE_SYMBOL(Enum):
 
 with open("./true_wordle.txt") as f:
     for line in f:
-        words.append(line.strip())
+        words.append(line.strip().upper())
 
 
 def handle_response(guess: str, positions: str, split_pattern: list):
@@ -23,10 +24,10 @@ def handle_response(guess: str, positions: str, split_pattern: list):
     # positions can be anythin from WORDLE_SYMBOL
     # guess: shirt
     # positions: "_ G G Y _"
-    # pattern: [[a-z],[a-z], [a-z], [a-z], [a-z]]
+    # pattern: [[A-Z],[A-Z], [A-Z], [A-Z], [A-Z]]
 
     answer = {"eliminated_letter": [], "pattern": ""}
-    wild_card = "[a-z]"
+    wild_card = "[A-Z]"
     for idx in range(0, 5):
         current_letter = guess[idx]
         current_pattern = split_pattern[idx]
@@ -47,30 +48,33 @@ def handle_response(guess: str, positions: str, split_pattern: list):
     return answer
 
 
-def get_a_word(pattern, eliminated_letters, words):
+def get_a_word(pattern, eliminated_letters, words, debug = False):
     guess_pattern = re.compile(pattern)
-    print(f"guess {pattern} and eliminate {eliminated_letters} '\n")
+    debug and print(f"guess {pattern} and eliminate {eliminated_letters} '\n")
 
     filtered_list = words
-    print("number of words: ", len(filtered_list), "\n")
+    debug and print("number of words: ", len(filtered_list), "\n")
     if eliminated_letters:
-        print("some eliminated using letters ", eliminated_letters, "\n")
+        debug and print("some eliminated using letters ", eliminated_letters, "\n")
         # 100% this could be a regex but i couldnt figure it out nor did i care to
         filtered_list = list(
             filter(
                 lambda word: not any(letter in word for letter in eliminated_letters),
-                scored_words,
+                filtered_list,
             )
         )
-        print("words left after eliminating letters", len(filtered_list))
+        debug and print("words left after eliminating letters", len(filtered_list))
 
     filtered_list = list(filter(guess_pattern.match, filtered_list))
-    print("words left after matching pattern", len(filtered_list), "\n\n\n")
+    debug and print("words left after pattern match", len(filtered_list))
+ 
 
     try:
-        return filtered_list[0]
-    except:
-        print("no words left")
+        if (debug and len(filtered_list) < 10):
+            print(filtered_list)
+        return filtered_list[0].upper()
+    except Exception as e:
+        # print(e)
         return None
 
 
@@ -111,7 +115,7 @@ def seperate_pattern(str_pattern: str):
 
 
 def clean_not_letters_pattern(str_pattern):
-    s = pattern.replace("[", "")
+    s = str_pattern.replace("[", "")
     s = s.replace("]", "")
     s = s.replace("^", "")
     return s
@@ -133,13 +137,28 @@ for word in words:
 scored_words = sort_a_dict(scored_words)
 
 
+
+def handle_wordle_response(response: str, guess: str, guessed_letters: list, pattern: str):
+    if response == WORDLE_SYMBOL.G.value * 5:
+        print("you win!")
+        return
+    else:
+        response = handle_response(guess, response, seperate_pattern(pattern))
+        guessed_letters = response["eliminated_letter"] + guessed_letters
+        pattern = response["pattern"]
+        return guessed_letters, pattern
+
+
+
+
+
 def main():
     guesses = 0
     current_guessed_letters = []
-    current_pattern = r"[a-z][a-z][a-z][a-z][a-z]"
+    current_pattern = r"[A-Z][A-Z][A-Z][A-Z][A-Z]"
     while guesses < 10:
         guess = get_a_word(current_pattern, current_guessed_letters, scored_words)
-        if guess:
+        if isinstance(guess, str):
             print("try: ", guess)
 
             wordle_response = typer.prompt(f"response from wordle?")
@@ -150,7 +169,7 @@ def main():
                 break
 
             response = handle_response(
-                guess, wordle_response.upper(), seperate_pattern(current_pattern)
+                guess, wordle_response, seperate_pattern(current_pattern)
             )
             current_pattern = response["pattern"]
             current_guessed_letters = (
