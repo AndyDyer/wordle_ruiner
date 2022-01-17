@@ -121,20 +121,22 @@ def clean_not_letters_pattern(str_pattern):
     return s
 
 
-# SET UP
-letters = count_letters_in_words(words)
-
-sorted_letters = sorted(letters.items(), key=lambda kv: (kv[1], kv[0]), reverse=True)
-
-
-scores = normalize_scores(sorted_letters)
-
-scored_words = {}
-for word in words:
-    scored_words[word] = score_a_word(word, scores)
+def sort_words_by_score(words: List[str]):
+    letters = count_letters_in_words(words)
+    sorted_letters = sorted(letters.items(), key=lambda kv: (kv[1], kv[0]), reverse=True)
 
 
-scored_words = sort_a_dict(scored_words)
+    scores = normalize_scores(sorted_letters)
+
+    scored_words = {}
+    for word in words:
+        scored_words[word] = score_a_word(word, scores)
+
+
+    scored_words = sort_a_dict(scored_words)
+    return scored_words
+
+
 
 
 
@@ -156,12 +158,18 @@ def main():
     guesses = 0
     current_guessed_letters = []
     current_pattern = r"[A-Z][A-Z][A-Z][A-Z][A-Z]"
+    scored_words = words
     while guesses < 10:
+        scored_words = sort_words_by_score(scored_words)
         guess = get_a_word(current_pattern, current_guessed_letters, scored_words)
         if isinstance(guess, str):
             print("try: ", guess)
+            wordle_response = typer.prompt(f"response from wordle (G, Y, X) ?")
 
-            wordle_response = typer.prompt(f"response from wordle?")
+            while len(wordle_response) != 5:
+                print ("must be 5 char response")
+                wordle_response = typer.prompt(f"response from wordle?")
+
             wordle_response = wordle_response.upper()
 
             if wordle_response == WORDLE_SYMBOL.G.value * 5:
