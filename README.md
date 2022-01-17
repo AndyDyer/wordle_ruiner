@@ -8,7 +8,7 @@ I tried a hueristic where youd guess high point words regardless of what results
 | event | number |
 | --- | --- |
 |average guesses | 3.57960247	|
-|ran out of guesses | 2608	| 
-|success percent |	0.748359707% |
+|ran out of guesses | 2609	| 
+|success percent |	80% |
 
 

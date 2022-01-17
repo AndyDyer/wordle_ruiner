@@ -8,9 +8,9 @@ from ruiner import (
     WORDLE_SYMBOL,
     handle_response,
     seperate_pattern,
+    sort_words_by_score,
     get_a_word,
     words,
-    scored_words,
 )
 
 
@@ -30,13 +30,19 @@ def build_wordle_pattern(guess: str, answer: str):
 
 def play_self(word, debug=False):
     guesses = 0
-    words_in_play = copy.deepcopy(scored_words)
+    words_in_play = copy.deepcopy(words)
     current_guessed_letters = []
     current_pattern = r"[A-Z][A-Z][A-Z][A-Z][A-Z]"
     debug and print('WORD ', word)
     try:
         while guesses < 6:
-            guess = get_a_word(current_pattern, current_guessed_letters, words_in_play, debug=debug)
+            words_in_play = sort_words_by_score(words_in_play)
+            if guesses == 0:
+                guess = "NOTES"
+            elif guesses == 1:
+                guess = "ACRID"
+            else: 
+                guess = get_a_word(current_pattern, current_guessed_letters, words_in_play, debug=debug)
             if guess:
                 debug and print("try: ", guess)
 
@@ -71,10 +77,20 @@ def play_self(word, debug=False):
         return {"word": word, "status": "ERROR IN LOGIC"}
 
 
-validate = Parallel(n_jobs=-1)(delayed(play_self)(word) for word in tqdm(words))
+validate = Parallel(n_jobs=-1)(delayed(play_self)(word) for word in tqdm(words[:1000]))
 
 
 with open("validation.csv", "w") as f:
     writer = csv.DictWriter(f, fieldnames=["word", "status"])
     writer.writeheader()
     writer.writerows(validate)
+
+
+how_many_fails = len([x for x in validate if x["status"] == "NO MORE GUESSES"])
+guesses = [x["status"] for x in validate if isinstance(x["status"], int)]
+
+
+print ("how many fails: ", how_many_fails)
+print ("fail %: ", ((how_many_fails / len(validate) * 100)))
+print ("average guesses of win: ", sum(guesses) / len(guesses))
+
